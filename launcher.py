@@ -30,7 +30,8 @@ def _dispatch_worker():
     if len(sys.argv) > 1 and sys.argv[1] == "--run-worker":
         import run_cli
         a = sys.argv[2:]
-        run_cli.run(a[0], a[1] if len(a) > 1 else "", a[2] if len(a) > 2 else "")
+        run_cli.run(a[0], a[1] if len(a) > 1 else "", a[2] if len(a) > 2 else "",
+                    a[3] if len(a) > 3 else None)
         return True
     return False
 
@@ -70,8 +71,13 @@ def main():
     url = f"http://127.0.0.1:{port}/"
 
     if server_only:
-        # Headless mode for the CI boot self-test (and for debugging). Print a parseable READY line.
-        print(f"READY {url}" if up else "FAILED server did not bind", flush=True)
+        # Headless mode for the CI boot self-test (and for debugging). Print a parseable READY line
+        # IF we have a stdout (a frozen windowed exe has none — the boot test polls /health directly).
+        try:
+            if sys.stdout:
+                print(f"READY {url}" if up else "FAILED server did not bind", flush=True)
+        except Exception:
+            pass
         try:
             while True:
                 time.sleep(1)

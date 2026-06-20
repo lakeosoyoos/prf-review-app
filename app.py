@@ -4,7 +4,7 @@ Serves the guided UI and runs the deterministic review pipeline in a background 
 show live progress. No network calls; no LLM. Reads accounts (folders with account_config.yaml) from
 the configured accounts root(s).
 """
-import os, sys, json, threading, traceback, subprocess, platform
+import os, sys, json, time, tempfile, threading, traceback, subprocess, platform
 from flask import Flask, request, jsonify, send_from_directory
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -67,27 +67,35 @@ def api_run():
     JOBS[job_id] = {"progress": [], "done": False, "error": None, "result": None}
 
     def worker():
-        # run the pipeline in an isolated SUBPROCESS (keeps CPU-bound PDF/workbook work off the
-        # server's GIL — in-thread it starves under the dev server). Works frozen (re-invokes the
-        # app exe with --pipeline) and in dev (python run_cli.py).
-        # frozen: re-invoke the .exe with the --run-worker sentinel (sys.executable IS the .exe);
-        # dev: run the worker script with the python interpreter.
+        # Run the pipeline in an isolated SUBPROCESS (keeps CPU-bound PDF work off the server GIL).
+        # IPC is via a PROGRESS FILE — required because the frozen WINDOWED exe has no stdout.
+        # frozen: re-invoke the .exe with --run-worker (sys.executable IS the .exe); dev: run the script.
+        prog_fd, prog_path = tempfile.mkstemp(suffix=".jsonl")
+        os.close(prog_fd)
         if getattr(sys, "frozen", False):
-            cmd = [sys.executable, "--run-worker", cfg, mode or "", level or ""]
+            cmd = [sys.executable, "--run-worker", cfg, mode or "", level or "", prog_path]
         else:
-            cmd = [sys.executable, "-u", os.path.join(HERE, "run_cli.py"), cfg, mode or "", level or ""]
-        try:
-            # discard stderr (library warnings on scanned PDFs would otherwise fill the pipe and
-            # deadlock the child); the worker reports real errors as JSON on stdout.
-            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, cwd=HERE)
-            for line in p.stdout:
+            cmd = [sys.executable, "-u", os.path.join(HERE, "run_cli.py"), cfg, mode or "", level or "", prog_path]
+        popen_kw = dict(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=HERE)
+        if os.name == "nt":
+            popen_kw["creationflags"] = 0x08000000        # CREATE_NO_WINDOW — no console flash
+        pos = 0
+
+        def drain():
+            nonlocal pos
+            try:
+                with open(prog_path, encoding="utf-8") as f:
+                    f.seek(pos); chunk = f.read(); pos = f.tell()
+            except FileNotFoundError:
+                return
+            for line in chunk.splitlines():
                 line = line.strip()
                 if not line:
                     continue
                 try:
                     msg = json.loads(line)
                 except ValueError:
-                    continue                              # ignore any non-JSON noise
+                    continue
                 if "progress" in msg:
                     JOBS[job_id]["progress"].append(msg["progress"])
                 elif "result" in msg:
@@ -95,12 +103,21 @@ def api_run():
                 elif "error" in msg:
                     JOBS[job_id]["error"] = msg["error"]
                     JOBS[job_id]["progress"].append("ERROR: " + msg["error"])
-            p.wait()
+
+        try:
+            p = subprocess.Popen(cmd, **popen_kw)
+            while p.poll() is None:
+                drain(); time.sleep(0.3)
+            drain()                                       # final flush
             if p.returncode and not JOBS[job_id]["result"] and not JOBS[job_id]["error"]:
                 JOBS[job_id]["error"] = "the review did not finish (unexpected exit)"
         except Exception as e:
             JOBS[job_id]["error"] = str(e); traceback.print_exc()
         finally:
+            try:
+                os.remove(prog_path)
+            except OSError:
+                pass
             JOBS[job_id]["done"] = True
 
     threading.Thread(target=worker, daemon=True).start()

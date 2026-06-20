@@ -1,41 +1,37 @@
 # PyInstaller spec — single self-contained Windows .exe for the PRF Review desktop app.
 # Run from the project root:  pyinstaller build/PRF_Review.spec
-from PyInstaller.utils.hooks import collect_all, collect_submodules
+# NOTE: PyInstaller resolves Analysis paths relative to the SPEC FILE's directory, so we anchor
+# everything to the project ROOT (the spec lives in build/).
+import os
+from PyInstaller.utils.hooks import collect_all
 
+ROOT = os.path.dirname(os.path.abspath(SPECPATH))   # SPECPATH = the build/ dir; ROOT = project root
 block_cipher = None
 
-# collect_all() pulls code + data + hidden imports for fragile packages (reportlab ships fonts;
-# jaraco/setuptools have vendoring quirks; flask is generally fine but cheap to be safe).
 datas, binaries, hiddenimports = [], [], []
-for pkg in ["reportlab", "openpyxl", "jaraco.text", "jaraco.functools", "jaraco.context",
-            "jaraco.collections", "flask"]:
-    try:
-        d, b, h = collect_all(pkg)
-        datas += d; binaries += b; hiddenimports += h
-    except Exception:
-        pass
+# collect_all() pulls code + data + hidden imports for fragile packages (reportlab ships fonts, etc.)
+for pkg in ["reportlab", "openpyxl", "flask"]:
+    d, b, h = collect_all(pkg)
+    datas += d; binaries += b; hiddenimports += h
 
-# Belt-and-suspenders for the setuptools-vendoring crash.
-hiddenimports += collect_submodules("setuptools") + ["pkg_resources", "jaraco"]
+# Belt-and-suspenders for the setuptools/pkg_resources vendoring crash (declare, don't deep-scan).
+hiddenimports += ["pkg_resources", "jaraco.text", "jaraco.functools", "jaraco.context", "jaraco.collections"]
 
-# Bundle the UI assets.
-datas += [("web", "web")]
-
-# The vendored pipeline scripts are imported dynamically (sys.path insert) -> declare explicitly.
+# UI assets + the dynamically-imported vendored pipeline scripts.
+datas += [(os.path.join(ROOT, "web"), "web")]
 hiddenimports += [
     "name_match", "trs_match", "doc_index", "build_grid_sufficiency", "verify_locations",
     "align_to_prior_aip", "set_specificity", "build_location_verified",
 ]
 
 a = Analysis(
-    ["launcher.py"],
-    pathex=["core/scripts"],            # so the vendored modules resolve at build time
+    [os.path.join(ROOT, "launcher.py")],
+    pathex=[ROOT, os.path.join(ROOT, "core", "scripts")],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
-    # heavy libs not used at runtime (parcels.pkl is prebuilt) — exclude to keep the .exe lean.
     excludes=["shapely", "pyproj", "shapefile", "numpy", "matplotlib", "tkinter", "webview"],
     cipher=block_cipher,
     noarchive=False,
@@ -46,7 +42,7 @@ exe = EXE(
     name="PRF Review",
     debug=False, bootloader_ignore_signals=False, strip=False, upx=False,
     runtime_tmpdir=None,
-    console=False,                      # windowed app (no console window for the boss)
+    console=False,
     disable_windowed_traceback=False,
     icon=None,
 )
