@@ -60,14 +60,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PRF-Review-Setup
-          path: installer_out/*.exe
+          path: installer/installer_out/*.exe
           if-no-files-found: error
 
       - name: "Gate 6 — Publish GitHub Release (tags only)"
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          files: installer_out/*.exe
+          files: installer/installer_out/*.exe
           fail_on_unmatched_files: true
 
       # ---------- optional: surface field/CI failures in one Slack channel ----------
