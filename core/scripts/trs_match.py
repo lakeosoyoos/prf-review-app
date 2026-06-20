@@ -9,8 +9,8 @@ Parses the four formats seen in the field into (township, range, section) int tu
                                                         # tribal: "Section 35, Township 31 North, Range 25 East"
 
     idx = InstrumentIndex()
-    idx.add_instrument(legal_text, label="WA DNR lease C1200B71 -> Gebbers Cattle Ltd")
-    idx.lookup((31, 25, 31))  -> ["WA DNR lease C1200B71 -> Gebbers Cattle Ltd"]
+    idx.add_instrument(legal_text, label="WA DNR lease C1200B71 -> Example Cattle Ltd")
+    idx.lookup((31, 25, 31))  -> ["WA DNR lease C1200B71 -> Example Cattle Ltd"]
 """
 import re
 

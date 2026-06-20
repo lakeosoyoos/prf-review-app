@@ -10,7 +10,7 @@
 [Setup]
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppPublisher=North Valley Insurance
+AppPublisher=Field Office Insurance
 DefaultDirName={autopf}\PRF Review
 DefaultGroupName=PRF Review
 DisableProgramGroupPage=yes

@@ -54,6 +54,22 @@ To ship: push this folder to a GitHub repo → Actions → **Windows release (6 
 Pins are hard requirements: **Python 3.11** (not 3.12), PyInstaller + Inno Setup, everything pinned in
 `requirements-desktop.txt` (incl. `setuptools==65.5.1` + `jaraco.*` for a known vendoring crash).
 
+## Delivery — one permanent link that always serves the latest verified build
+Distribution is a GitHub Release on a **single rolling tag, `windows-build`**, whose assets CI
+**overwrites (`--clobber`) on every green build**. The tag never changes, so:
+- the download URL is **permanent** — techs bookmark it once;
+- it always points at the **newest** build (CI replaced the file in place); no version hunting;
+- it can **never serve a broken build** — the publish step (Gate 6) only runs after the boot
+  self‑test (Gate 4) passes, so a build that didn't launch never reaches the link.
+
+Permanent links (public repo → no login needed):
+- Installer: `https://github.com/lakeosoyoos/prf-review-app/releases/download/windows-build/PRF-Review-Setup.exe`
+- Portable ZIP: `…/releases/download/windows-build/PRF-Review-Windows.zip`
+
+Updates reach techs by **manual re‑download** from the same link (the installer upgrades in place).
+Each build is stamped with the CI run number and shown in the app header (“Build ####”) so a tech can
+report exactly which build they're on. Tech‑facing instructions: **`TECH_DOWNLOAD.md`**.
+
 ## Developing on this Mac
 ```
 pip install -r requirements-desktop.txt

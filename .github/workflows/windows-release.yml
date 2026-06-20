@@ -29,6 +29,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-desktop.txt
 
+      - name: Stamp build version (shown in the app's header / About)
+        shell: pwsh
+        run: "$env:APP_VERSION | Out-File -FilePath version.txt -Encoding ascii -NoNewline"
+
       # ---------- GATE 1: logic tests (before anything is frozen) ----------
       - name: "Gate 1 — pytest (logic)"
         run: python -m pytest tests/test_smoke.py -q
@@ -63,12 +67,24 @@ jobs:
           path: installer/installer_out/*.exe
           if-no-files-found: error
 
-      - name: "Gate 6 — Publish GitHub Release (tags only)"
-        if: github.ref_type == 'tag'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: installer/installer_out/*.exe
-          fail_on_unmatched_files: true
+      # The permanent delivery link: ONE rolling tag whose assets CI overwrites every green build.
+      # URL techs bookmark:  https://github.com/<owner>/<repo>/releases/download/windows-build/PRF-Review-Setup.exe
+      - name: "Gate 6 — Publish to permanent rolling release (windows-build)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem "installer/installer_out/*.exe" | Select-Object -First 1
+          Copy-Item $setup.FullName "PRF-Review-Setup.exe" -Force         # fixed name -> stable URL
+          Compress-Archive -Path "dist/PRF Review.exe" -DestinationPath "PRF-Review-Windows.zip" -Force
+          $notes = "Latest verified build (#$env:GITHUB_RUN_NUMBER) — always the newest build that passed the boot self-test."
+          gh release view windows-build *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create windows-build --title "PRF Review — Windows desktop build" --notes "$notes"
+          } else {
+            gh release edit windows-build --notes "$notes"
+          }
+          gh release upload windows-build "PRF-Review-Setup.exe" "PRF-Review-Windows.zip" --clobber
 
       # ---------- optional: surface field/CI failures in one Slack channel ----------
       - name: Notify Slack on failure

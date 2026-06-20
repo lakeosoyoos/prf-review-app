@@ -105,3 +105,7 @@ function baseName(p) { return p.replace(/\/+$/, "").split(/[\\/]/).pop(); }
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
 loadAccounts();
+
+fetch("/api/version").then(r => r.json()).then(d => {
+  document.getElementById("ver").textContent = "Build " + (d.version || "dev");
+}).catch(() => {});

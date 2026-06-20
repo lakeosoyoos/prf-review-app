@@ -9,8 +9,8 @@ location. Roster-driven (account_config.yaml) — no per-account hardcoding.
     di = DocIndex.build(source_dirs=["/path/Supporting Lease Documents", "/path/AIP_Harvest"],
                         config="account_config.yaml",
                         agency_bundles={"WA DNR (state lease)": "GC DNR State Leases (bundle).pdf", ...})
-    di.lookup("GAMBLE LAND & TIMBER LTD")        -> ["gamble land and timber signed lease cert.pdf", ...]
-    di.lookup("DNR-Ruby Range", trs=(31,25,33))  -> ["<recorded DNR lease for that section>.pdf"] or [bundle]
+    di.lookup("BIRCH LAND & TIMBER LTD")        -> ["gamble land and timber signed lease cert.pdf", ...]
+    di.lookup("DNR-Red Ridge", trs=(31,25,33))  -> ["<recorded DNR lease for that section>.pdf"] or [bundle]
     di.write("extracted/doc_index.json")
 
 Matching is intentionally conservative: a file is assigned to a roster name only when the name's
@@ -24,7 +24,7 @@ from name_match import OwnerClassifier, _norm  # reuse the roster classifier + n
 
 # Generic corporate suffixes + filename-noise words carry no identifying signal. NOTE we deliberately
 # KEEP entity-type words (CATTLE, FARMS, RANCH, LAND, TIMBER, RESORT, FLATS...) because they
-# distinguish look-alike rosters (Gebbers Cattle vs Gebbers Farms; Gamble Land & Timber vs Gamble Resort).
+# distinguish look-alike rosters (Example Cattle vs Example Farms; Birch Land & Timber vs Birch Resort).
 _STOP = {"LLC", "INC", "LP", "LTD", "CO", "COMPANY", "CORP", "THE", "AND", "OF", "A",
          "PROPERTIES", "PROPERTY", "ENTERPRISES", "ENTERPRISE", "PARTNERSHIP",
          "GROUP", "HOLDING", "HOLDINGS", "TRUST", "FAMILY",
@@ -41,7 +41,7 @@ _AGENCY_KW = [  # filename keyword -> canonical agency label (matches name_match
 
 def _terms(s):
     """Distinctive comparable tokens from a name OR a filename, normalized the same way so
-    'C & M', 'C&M' and 'c&m 1 ...' all reduce to {'CM'} and 'GAMBLE LAND & TIMBER' to {'GAMBLE'}."""
+    'C & M', 'C&M' and 'c&m 1 ...' all reduce to {'CM'} and 'BIRCH LAND & TIMBER' to {'BIRCH'}."""
     n = _norm(s)
     n = re.sub(r"\b([A-Z])\s*&\s*([A-Z])\b", r"\1\2", n)   # glue single-letter initialisms: C & M -> CM
     n = n.replace("&", " ")
@@ -62,7 +62,7 @@ def _score(name_toks, fn_toks):
     """Match a roster name against a filename's tokens. Returns (hits, coverage).
     hits = # of the name's distinctive tokens present (absolute specificity);
     coverage = hits / len(name_toks). Compare candidates by (hits, coverage) so a 2-token match
-    (CASS+ALYCIA) beats a 1-token match (CASS) for the same file."""
+    (ABLE+BAKER) beats a 1-token match (ABLE) for the same file."""
     if not name_toks or not fn_toks:
         return (0, 0.0)
     fnset = set(fn_toks)

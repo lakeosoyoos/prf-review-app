@@ -25,6 +25,8 @@ hiddenimports += ["pkg_resources", "jaraco.text", "jaraco.functools", "jaraco.co
 
 # UI assets + the dynamically-imported vendored pipeline scripts.
 datas += [(os.path.join(ROOT, "web"), "web")]
+if os.path.exists(os.path.join(ROOT, "version.txt")):   # build stamp written by CI (shown in the app)
+    datas += [(os.path.join(ROOT, "version.txt"), ".")]
 hiddenimports += [
     "name_match", "trs_match", "doc_index", "build_grid_sufficiency", "verify_locations",
     "align_to_prior_aip", "set_specificity", "build_location_verified",

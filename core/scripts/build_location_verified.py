@@ -118,7 +118,7 @@ def main(src, verdicts_path, dest, title=None):
     for r in list(sm.iter_rows()):
         for c in r:
             c.value = None
-    ttl = title or "Location Verification — Gebbers Cattle LP, CY2026"
+    ttl = title or "Location Verification — Example Cattle LP, CY2026"
     sm["A1"] = ttl; sm["A1"].font = TITLE
     tot = sum(counts.values())
     matched_precise = counts["MATCHED"]

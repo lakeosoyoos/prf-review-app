@@ -9,8 +9,8 @@ The fix is a curated per-account roster (account_config.yaml) compiled into expl
 
     from name_match import OwnerClassifier
     oc = OwnerClassifier.from_config("account_config.yaml")
-    oc.classify("DNR-Ruby Range")        -> ("gov_lease", "WA DNR (state lease)")
-    oc.classify("GAMBLE LAND & TIMBER")  -> ("lessor", "GAMBLE LAND & TIMBER")
+    oc.classify("DNR-Red Ridge")        -> ("gov_lease", "WA DNR (state lease)")
+    oc.classify("BIRCH LAND & TIMBER")  -> ("lessor", "BIRCH LAND & TIMBER")
     oc.classify("SMITH, RANDOM")         -> ("none", None)
 """
 import re
@@ -90,8 +90,8 @@ class OwnerClassifier:
 
 
 if __name__ == "__main__":
-    oc = OwnerClassifier(["GEBBERS CATTLE"], ["GEBBERS FARMS", "CASCADE HOLDING"],
-                         ["GAMBLE", "CHALMERS"], ["TJF", "C & M", "J & J"])
-    for t in ["DNR-Ruby Range", "GAMBLE LAND & TIMBER LTD", "C & M I LLC",
+    oc = OwnerClassifier(["EXAMPLE CATTLE"], ["EXAMPLE FARMS", "SUMMIT HOLDING"],
+                         ["BIRCH", "CEDAR"], ["TJF", "C & M", "J & J"])
+    for t in ["DNR-Red Ridge", "BIRCH LAND & TIMBER LTD", "C & M I LLC",
               "TJF PROPERTIES LLC", "BEAR LAKE ESTATES", "SMITH ETAL, JOHN"]:
         print(f"  {t!r:34} -> {oc.classify(t)}")

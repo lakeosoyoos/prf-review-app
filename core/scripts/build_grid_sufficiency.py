@@ -179,7 +179,7 @@ def main(config_path, flat=False, out_override=None):
     c_ac = col("Field Reported Acres", "Reported Acres")
     c_leg, c_grid = col("Legal"), col("Assigned To", "Grid")
     c_ctl = col("Control source (section parcels)", "Control source")
-    c_les = col("Lessor (party leasing to Gebbers Cattle LP)", "Lessor")
+    c_les = col("Lessor (party leasing to Example Cattle LP)", "Lessor")
     c_flag = col("Flag")
 
     overrides = D.get("manual_overrides") or []

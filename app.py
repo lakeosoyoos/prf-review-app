@@ -33,10 +33,28 @@ app = Flask(__name__, static_folder=None)
 JOBS = {}   # job_id -> {progress:[...], done:bool, error:str|None, result:dict|None}
 
 
+def app_version():
+    """Build stamp written by CI into version.txt (bundled). 'dev' when run from source."""
+    base = getattr(sys, "_MEIPASS", HERE)
+    for p in (os.path.join(base, "version.txt"), os.path.join(HERE, "version.txt")):
+        try:
+            v = open(p).read().strip()
+            if v:
+                return v
+        except OSError:
+            continue
+    return "dev"
+
+
 @app.route("/health")
 def health():
     # Boot self-test endpoint (CI Gate 4). 200 == the frozen app actually came up.
     return ("ok", 200, {"Content-Type": "text/plain"})
+
+
+@app.route("/api/version")
+def api_version():
+    return jsonify({"version": app_version()})
 
 
 @app.route("/")
