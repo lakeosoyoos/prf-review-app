@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRF High Dollar Review</title>
+<link rel="stylesheet" href="/web/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">PRF</div>
+    <div>
+      <h1>PRF High Dollar Review</h1>
+      <p class="tag">Runs entirely on this computer — nothing is sent anywhere.</p>
+    </div>
+  </div>
+  <ol class="steps">
+    <li id="s1" class="active">1 &nbsp;Account</li>
+    <li id="s2">2 &nbsp;Review</li>
+    <li id="s3">3 &nbsp;Run</li>
+  </ol>
+</header>
+
+<main>
+  <!-- STEP 1 -->
+  <section id="step1" class="step">
+    <h2>Choose an account</h2>
+    <p class="hint">Pick the account you want to review. (These are the folders set up by the reviewer.)</p>
+    <div id="accountList" class="cards"></div>
+    <p id="noAccounts" class="empty" hidden>No accounts found. Ask the reviewer to set up an account folder
+      (one that contains <code>account_config.yaml</code>).</p>
+  </section>
+
+  <!-- STEP 2 -->
+  <section id="step2" class="step" hidden>
+    <button class="back" onclick="goStep(1)">&larr; Back</button>
+    <h2>Choose the review</h2>
+    <div id="acctBadge" class="badge"></div>
+    <div class="cards two">
+      <div class="card pick" data-mode="location" onclick="pickMode('location')">
+        <div class="rec">Recommended</div>
+        <h3>Location Review</h3>
+        <p>Checks <b>every location</b> against the lease, deed, or permit that covers it, and produces
+           the verified workbook with a follow-up list.</p>
+      </div>
+      <div class="card pick" data-mode="acreage" onclick="pickMode('acreage')">
+        <h3>Acreage Review</h3>
+        <p>Checks that <b>each grid</b> holds enough controlled acreage. Faster, grid-level.</p>
+      </div>
+    </div>
+
+    <div id="specBlock">
+      <h3 class="sub">How specific should the location matches be?</h3>
+      <div class="cards three" id="specCards">
+        <div class="card pick" data-level="instrument" onclick="pickLevel('instrument')">
+          <div class="rec">Recommended</div>
+          <h4>Standard</h4>
+          <p>Matched when a lease, deed, or permit is on file for that ground — the same standard
+             accepted in last year's review.</p>
+        </div>
+        <div class="card pick" data-level="section" onclick="pickLevel('section')">
+          <h4>Section</h4>
+          <p>Requires the document's legal description to name the exact section. Stricter — more items
+             land on the follow-up list.</p>
+        </div>
+        <div class="card pick" data-level="parcel" onclick="pickLevel('parcel')">
+          <h4>Strict</h4>
+          <p>Requires an exact parcel / tax-lot match. Strictest — longest follow-up list.</p>
+        </div>
+      </div>
+    </div>
+
+    <button id="toRun" class="primary big" onclick="goStep(3)" disabled>Continue &rarr;</button>
+  </section>
+
+  <!-- STEP 3 -->
+  <section id="step3" class="step" hidden>
+    <button class="back" onclick="goStep(2)">&larr; Back</button>
+    <h2>Run the review</h2>
+    <div id="runSummary" class="badge"></div>
+    <button id="runBtn" class="primary big" onclick="runReview()">▶ &nbsp;Run review</button>
+
+    <div id="progress" class="progress" hidden>
+      <div class="spinner" id="spinner"></div>
+      <ul id="progressLog"></ul>
+    </div>
+
+    <div id="result" class="result" hidden>
+      <div class="done">✓ Review complete</div>
+      <div id="resultStats" class="stats"></div>
+      <p class="hint">Your deliverable folders are ready:</p>
+      <div id="resultFolders"></div>
+    </div>
+  </section>
+</main>
+
+<script src="/web/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# build artifacts
+build/*/
+dist/
+installer_out/
+*.app/
+*.spec.bak
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+# local-only config + account data (never commit account PII / parcel layers)
+settings.json
+accounts/*/

@@ -1,0 +1,10 @@
+# PRF Review desktop app — runtime (all offline; no network, no LLM)
+Flask>=3.0
+pywebview>=5.0        # native desktop window; on Windows uses the built-in Edge WebView2
+openpyxl>=3.1         # workbooks
+pypdf>=4.0            # bundle/split supporting PDFs
+reportlab>=4.0        # generated parcel-record sheets
+PyYAML>=6.0           # account_config.yaml
+
+# Build only (not needed at runtime) — used by the GitHub Actions Windows build:
+#   pyinstaller>=6.0

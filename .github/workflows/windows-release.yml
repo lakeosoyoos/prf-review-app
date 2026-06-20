@@ -1,0 +1,83 @@
+name: Windows release (6 gates)
+
+# The #1 guarantee: a build that doesn't actually launch can NEVER be published.
+# Each gate is a separate step; GitHub Actions stops the job on the first failure, so the installer
+# (Gate 5) and publish (Gate 6) are only reachable after the BOOT SELF-TEST (Gate 4) is green.
+on:
+  workflow_dispatch: {}
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write           # needed for Gate 6 release publishing on a tag
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('0.0.{0}', github.run_number) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"            # PINNED — not 3.12 (PyInstaller breakage)
+
+      - name: Install pinned dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-desktop.txt
+
+      # ---------- GATE 1: logic tests (before anything is frozen) ----------
+      - name: "Gate 1 — pytest (logic)"
+        run: python -m pytest tests/test_smoke.py -q
+
+      # ---------- GATE 2: dependency-completeness on a clean env ----------
+      - name: "Gate 2 — dependency completeness (clean-env import scan)"
+        run: python -m pytest tests/test_deps_complete.py -q
+
+      # ---------- GATE 3: build the .exe ----------
+      - name: "Gate 3 — PyInstaller build"
+        run: pyinstaller --clean --noconfirm build/PRF_Review.spec
+
+      # ---------- GATE 4: BOOT SELF-TEST (the hard guarantee) ----------
+      - name: "Gate 4 — BOOT SELF-TEST (launch the .exe, poll /health, fail if DOA)"
+        env:
+          PRF_EXE: dist/PRF Review.exe
+        run: python -m pytest -m boot tests/test_boot_exe.py -q -s
+
+      # ---------- GATE 5: installer (only reachable if Gate 4 passed) ----------
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: "Gate 5 — Inno Setup installer"
+        shell: cmd
+        run: '"%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" installer\PRF_Review.iss'
+
+      # ---------- GATE 6: publish (only reachable if every prior gate passed) ----------
+      - name: "Gate 6 — Upload installer artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: PRF-Review-Setup
+          path: installer_out/*.exe
+          if-no-files-found: error
+
+      - name: "Gate 6 — Publish GitHub Release (tags only)"
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer_out/*.exe
+          fail_on_unmatched_files: true
+
+      # ---------- optional: surface field/CI failures in one Slack channel ----------
+      - name: Notify Slack on failure
+        if: failure() && env.SLACK_WEBHOOK != ''
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        shell: bash
+        run: |
+          # Scrubbed: only workflow/run metadata — no file paths, no PII.
+          payload=$(printf '{"text":":x: PRF Review build FAILED at a gate on `%s` (run #%s). See: %s"}' \
+            "${{ github.ref_name }}" "${{ github.run_number }}" \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
+          curl -sf -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK" || true

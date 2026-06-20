@@ -1,0 +1,33 @@
+# PRF Review desktop app — FULLY PINNED build/runtime deps. Python 3.11 ONLY (not 3.12).
+# These pins are the contract the CI gates enforce; bump deliberately, never casually.
+
+# ---- app runtime (offline; no network, no LLM) ----
+Flask==3.0.3
+Werkzeug==3.0.4
+Jinja2==3.1.4
+itsdangerous==2.2.0
+click==8.1.7
+MarkupSafe==2.1.5
+blinker==1.8.2
+openpyxl==3.1.5
+et-xmlfile==1.1.0
+pypdf==4.3.1
+reportlab==4.2.2
+pillow==10.4.0
+PyYAML==6.0.2
+
+# ---- belt-and-suspenders for a known PyInstaller + setuptools-vendoring crash ----
+setuptools==65.5.1
+jaraco.text==3.12.1
+jaraco.functools==4.0.2
+jaraco.context==5.3.0
+jaraco.collections==5.1.0
+
+# ---- build + test toolchain ----
+pyinstaller==6.10.0
+pytest==8.3.3
+requests==2.32.3
+
+# pywebview is intentionally NOT pinned here: it's an OPTIONAL native-window upgrade, imported
+# under try/except in launcher.py. The frozen app launches via the browser if it's absent, so a
+# WebView/pythonnet packaging issue can never break the build or the boot self-test.
