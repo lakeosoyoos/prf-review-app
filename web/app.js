@@ -79,6 +79,10 @@ function addLog(m) {
 
 function showResult(res) {
   const wrap = document.getElementById("result"); wrap.hidden = false;
+  const lvl = { instrument: "Standard", section: "Section", parcel: "Strict" }[res.level] || res.level;
+  const modeLabel = res.mode === "location" ? "Location Review" : "Acreage Review";
+  document.getElementById("resultMeta").innerHTML =
+    `${modeLabel}${res.mode === "location" && lvl ? ` &nbsp;·&nbsp; Specificity: <b>${esc(lvl)}</b>` : ""}`;
   const stats = document.getElementById("resultStats"); stats.innerHTML = "";
   const sm = res.summary || {};
   if (sm.locations) {
