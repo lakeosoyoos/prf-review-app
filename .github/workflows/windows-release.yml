@@ -16,6 +16,7 @@ jobs:
     runs-on: windows-latest
     env:
       APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('0.0.{0}', github.run_number) }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}   # optional; Slack step is skipped if unset
     steps:
       - uses: actions/checkout@v4
 
@@ -72,8 +73,6 @@ jobs:
       # ---------- optional: surface field/CI failures in one Slack channel ----------
       - name: Notify Slack on failure
         if: failure() && env.SLACK_WEBHOOK != ''
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         shell: bash
         run: |
           # Scrubbed: only workflow/run metadata — no file paths, no PII.
