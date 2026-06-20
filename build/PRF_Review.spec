@@ -5,7 +5,13 @@
 import os
 from PyInstaller.utils.hooks import collect_all
 
-ROOT = os.path.dirname(os.path.abspath(SPECPATH))   # SPECPATH = the build/ dir; ROOT = project root
+# PyInstaller is always invoked from the project ROOT (CI workflow, build.bat, build.sh all do so),
+# so the cwd is the reliable anchor. (SPECPATH is the spec *file* path, which would point at build/.)
+ROOT = os.getcwd()
+if not os.path.exists(os.path.join(ROOT, "launcher.py")):
+    # fallback: spec lives in <ROOT>/build/, so the parent of the spec dir is the root
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(SPECPATH)))
+assert os.path.exists(os.path.join(ROOT, "launcher.py")), f"cannot locate launcher.py from ROOT={ROOT}"
 block_cipher = None
 
 datas, binaries, hiddenimports = [], [], []
