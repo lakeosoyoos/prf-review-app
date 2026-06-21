@@ -97,6 +97,27 @@ def run_review(config_path, mode=None, level=None, progress=lambda m: None):
             return {"folders": [f for f in folders if f], "mode": mode, "summary": _grid_summary(base if False else folders[0])}
 
         # ---- Location High Dollar Review ----
+        # Offline reader: if the lease/ownership documents haven't been turned into data yet, read them
+        # ON THIS MACHINE now (never clobbers reviewer-prepared files; guarded so it can't break the run).
+        try:
+            if not os.path.exists(os.path.join(account_dir, "extracted", "recorded_grazing_leases.json")):
+                from core.extract import ingest as _ingest
+                ent = cfg.get("entities") or {}
+                ents = list(ent.get("insured_aliases") or []) + list(ent.get("related") or [])
+                counties = [str(c) for p2 in (cfg.get("policies") or []) for c in (p2.get("counties") or [])]
+                ddirs = []
+                for d in (D.get("doc_source_dirs") or []):
+                    if "{PKT}" in d:
+                        hits = sorted(glob.glob(D.get("packet_glob"))) if D.get("packet_glob") else []
+                        d = d.replace("{PKT}", hits[-1]) if hits else None
+                    if d:
+                        ddirs.append(d)
+                progress("Reading lease/ownership documents on this computer (offline)…")
+                _ingest.ingest(ddirs, os.path.join(account_dir, "extracted"),
+                               entities=ents, counties=counties, progress=progress)
+        except Exception as e:
+            progress(f"(offline reader skipped: {e})")
+
         progress("Matching every location to the instrument that covers it…")
         verify_locations.main(config_path)
         vpath = os.path.join(account_dir, "extracted", "location_verdicts.json")

@@ -30,11 +30,12 @@ if os.path.exists(os.path.join(ROOT, "version.txt")):   # build stamp written by
 hiddenimports += [
     "name_match", "trs_match", "doc_index", "build_grid_sufficiency", "verify_locations",
     "align_to_prior_aip", "set_specificity", "build_location_verified",
+    "form_templates", "local_extract",   # vendored offline reader (core/extract)
 ]
 
 a = Analysis(
     [os.path.join(ROOT, "launcher.py")],
-    pathex=[ROOT, os.path.join(ROOT, "core", "scripts")],
+    pathex=[ROOT, os.path.join(ROOT, "core", "scripts"), os.path.join(ROOT, "core", "extract")],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,

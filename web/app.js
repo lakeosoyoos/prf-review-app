@@ -113,3 +113,11 @@ loadAccounts();
 fetch("/api/version").then(r => r.json()).then(d => {
   document.getElementById("ver").textContent = "Build " + (d.version || "dev");
 }).catch(() => {});
+
+fetch("/api/reader-status").then(r => r.json()).then(s => {
+  const el = document.getElementById("reader"); if (!el) return;
+  const ocr = s.ocr ? "OCR✓" : "OCR off";
+  el.textContent = s.parsers ? `Offline reader · ${ocr}` : "reader n/a";
+  el.title = `All document reading is on this computer (no internet). Standard forms: parsers always; ` +
+             `scans: ${s.ocr ? "OCR installed" : "install OCR pack for scanned docs"}; on-PC model: ${s.local_model ? "configured" : "off"}.`;
+}).catch(() => {});

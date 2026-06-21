@@ -57,6 +57,16 @@ def api_version():
     return jsonify({"version": app_version()})
 
 
+@app.route("/api/reader-status")
+def api_reader_status():
+    # what offline document-reading is available on this machine (no network)
+    try:
+        from core.extract import ingest
+        return jsonify(ingest.reader_status())
+    except Exception as e:
+        return jsonify({"parsers": False, "error": str(e)})
+
+
 @app.route("/")
 def index():
     return send_from_directory(WEB, "index.html")

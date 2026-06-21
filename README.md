@@ -83,6 +83,12 @@ python3 launcher.py            # runs the server + opens your browser
 - `app.py` — local Flask backend (UI + `/health` + runs reviews as an isolated subprocess).
 - `run_cli.py` — the subprocess worker (keeps heavy PDF work off the UI; emits clean JSON progress).
 - `core/pipeline.py` + `core/scripts/` — the offline review pipeline (vendored from the `/prf-review` skill).
+- `core/extract/` — the **offline document reader** (deterministic form parsers + optional local OCR +
+  loopback‑only on‑PC model). The pipeline auto‑reads the lease/ownership PDFs into the matcher's inputs
+  when they haven't been prepared yet — entirely on the machine, no network (`/api/reader-status` reports
+  what's available). Reads digital PDFs out of the box; scanned docs need the optional OCR pack installed.
+  Note: the county **parcel layer** (`extracted/parcels.pkl`) is still a one‑time GIS build — it can't come
+  from the PDFs.
 - `core/updater.py` — fail-closed Ed25519 update check (disabled until a real key is baked in).
 - `web/` — the guided UI.
 - `tests/` — the gate tests (`test_smoke`, `test_deps_complete`, `test_boot_exe`).

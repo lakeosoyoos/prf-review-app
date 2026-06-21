@@ -15,7 +15,7 @@ LOCAL = {
     "app", "launcher", "run_cli", "core", "pipeline",
     "name_match", "trs_match", "doc_index", "build_grid_sufficiency", "verify_locations",
     "align_to_prior_aip", "set_specificity", "build_location_verified", "spatial", "xlsx_style",
-    "parcel_rest",
+    "parcel_rest", "ingest", "form_templates", "local_extract",
 }
 # import-name -> distribution (PyPI) name where they differ
 DIST = {"yaml": "pyyaml", "PIL": "pillow"}
