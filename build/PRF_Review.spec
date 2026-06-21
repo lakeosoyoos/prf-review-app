@@ -33,6 +33,7 @@ hiddenimports += [
     "form_templates", "local_extract",   # vendored offline reader (core/extract)
     # lazily-imported (try/except) packages — declare so PyInstaller bundles them
     "core.extract.ingest", "core.parcels", "core.parcels.fetch", "core.parcels.assessor",
+    "core.parcels.geo",
 ]
 
 a = Analysis(

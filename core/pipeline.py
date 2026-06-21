@@ -107,15 +107,16 @@ def run_review(config_path, mode=None, level=None, progress=lambda m: None):
             ent0 = cfg.get("entities") or {}
             county = cfg.get("county_label") or next(
                 (str(c) for p2 in (cfg.get("policies") or []) for c in (p2.get("counties") or [])), "")
-            if ds.get("auto_fetch_parcels", True):
+            if ds.get("auto_fetch_parcels", True) and county:
                 from core.parcels import fetch as _pf
-                if _pf.supported(county):
-                    names = []
-                    for key in ("insured_aliases", "related", "lessors", "roster"):
-                        names += list(ent0.get(key) or [])
-                    ok, msg = _pf.ensure_parcels(county, names, pkl_abs, progress=progress)
-                    if not ok:
-                        progress(f"(parcel auto-fetch: {msg})")
+                names = []
+                for key in ("insured_aliases", "related", "lessors", "roster"):
+                    names += list(ent0.get(key) or [])
+                state = cfg.get("state") or ds.get("state") or "wa"
+                # known counties skip discovery; unknown ones are discovered at run time
+                ok, msg = _pf.ensure_parcels(county, names, pkl_abs, state=state, progress=progress)
+                if not ok:
+                    progress(f"(parcel auto-fetch: {msg})")
         except Exception as e:
             progress(f"(parcel auto-fetch skipped: {e})")
 

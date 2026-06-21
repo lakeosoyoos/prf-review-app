@@ -89,13 +89,19 @@ python3 launcher.py            # runs the server + opens your browser
   what's available). Reads digital PDFs out of the box; scanned docs need the optional OCR pack installed.
   Note: the county **parcel layer** (`extracted/parcels.pkl`) is still a one‑time GIS build — it can't come
   from the PDFs.
-- `core/parcels/` — **no-file parcel ownership auto-fetch.** When `extracted/parcels.pkl` is missing
-  or stale for a supported county, the Location pipeline builds it automatically by searching the
-  public county assessor (TaxSifter) for each roster name, reading owner + parcel off the results list,
-  and decoding Section/Township/Range from the parcel number. Cached and reused offline (default 180-day
-  freshness). Only public records come in — no client data goes out. Coverage depends on the account
-  roster being complete (same dependency the matcher already has); unsupported counties fall back to the
-  usual "parcel layer not found" message. Toggle with `data_sources.auto_fetch_parcels` (default on).
+- `core/parcels/` — **no-file parcel ownership auto-fetch, self-configuring for new counties.** When
+  `extracted/parcels.pkl` is missing or stale, the Location pipeline builds it at run time:
+  1. **Resolves the assessor URL** — a known one if we have it, else **discovers** it by probing the
+     standard TaxSifter/PublicAccess URL patterns for that county (so a new county needs no code change).
+  2. **Searches** the assessor by each roster name and reads owner + parcel off the results list.
+  3. **Auto-picks a TRS method** — spot-checks the fast parcel-number decode against the universal
+     `parcel geometry → BLM PLSS` truth (`geo.py`); uses the fast path if they agree, else PLSS per
+     parcel, else records owners without a section.
+  Cached + reused offline (180-day freshness). Public records IN only — no client data goes out.
+  Coverage depends on the roster being complete and the county being on the TaxSifter platform
+  (others fall back to the usual "parcel layer not found"). Geometry decode is WA-scoped today.
+  Toggle with `data_sources.auto_fetch_parcels` (default on); add a county to `KNOWN_BASES` to skip
+  discovery.
 - `web/` — the guided UI.
 - `tests/` — the gate tests (`test_smoke`, `test_deps_complete`, `test_boot_exe`).
 - `build/PRF_Review.spec`, `installer/PRF_Review.iss`, `.github/workflows/windows-release.yml` — packaging.
