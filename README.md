@@ -89,7 +89,13 @@ python3 launcher.py            # runs the server + opens your browser
   what's available). Reads digital PDFs out of the box; scanned docs need the optional OCR pack installed.
   Note: the county **parcel layer** (`extracted/parcels.pkl`) is still a one‑time GIS build — it can't come
   from the PDFs.
-- `core/updater.py` — fail-closed Ed25519 update check (disabled until a real key is baked in).
+- `core/parcels/` — **no-file parcel ownership auto-fetch.** When `extracted/parcels.pkl` is missing
+  or stale for a supported county, the Location pipeline builds it automatically by searching the
+  public county assessor (TaxSifter) for each roster name, reading owner + parcel off the results list,
+  and decoding Section/Township/Range from the parcel number. Cached and reused offline (default 180-day
+  freshness). Only public records come in — no client data goes out. Coverage depends on the account
+  roster being complete (same dependency the matcher already has); unsupported counties fall back to the
+  usual "parcel layer not found" message. Toggle with `data_sources.auto_fetch_parcels` (default on).
 - `web/` — the guided UI.
 - `tests/` — the gate tests (`test_smoke`, `test_deps_complete`, `test_boot_exe`).
 - `build/PRF_Review.spec`, `installer/PRF_Review.iss`, `.github/workflows/windows-release.yml` — packaging.

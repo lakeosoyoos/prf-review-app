@@ -18,7 +18,7 @@ LOCAL = {
     "parcel_rest", "ingest", "form_templates", "local_extract",
 }
 # import-name -> distribution (PyPI) name where they differ
-DIST = {"yaml": "pyyaml", "PIL": "pillow"}
+DIST = {"yaml": "pyyaml", "PIL": "pillow", "bs4": "beautifulsoup4"}
 STDLIB = set(getattr(sys, "stdlib_module_names", set())) | {"__future__"}
 
 

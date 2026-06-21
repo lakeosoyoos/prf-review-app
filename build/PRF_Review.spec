@@ -16,7 +16,7 @@ block_cipher = None
 
 datas, binaries, hiddenimports = [], [], []
 # collect_all() pulls code + data + hidden imports for fragile packages (reportlab ships fonts, etc.)
-for pkg in ["reportlab", "openpyxl", "flask"]:
+for pkg in ["reportlab", "openpyxl", "flask", "bs4"]:
     d, b, h = collect_all(pkg)
     datas += d; binaries += b; hiddenimports += h
 
@@ -31,6 +31,8 @@ hiddenimports += [
     "name_match", "trs_match", "doc_index", "build_grid_sufficiency", "verify_locations",
     "align_to_prior_aip", "set_specificity", "build_location_verified",
     "form_templates", "local_extract",   # vendored offline reader (core/extract)
+    # lazily-imported (try/except) packages — declare so PyInstaller bundles them
+    "core.extract.ingest", "core.parcels", "core.parcels.fetch", "core.parcels.assessor",
 ]
 
 a = Analysis(

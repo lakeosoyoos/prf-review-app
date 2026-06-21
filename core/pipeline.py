@@ -97,6 +97,28 @@ def run_review(config_path, mode=None, level=None, progress=lambda m: None):
             return {"folders": [f for f in folders if f], "mode": mode, "summary": _grid_summary(base if False else folders[0])}
 
         # ---- Location High Dollar Review ----
+        # Parcel ownership: auto-build the index from the public county assessor if it's missing or
+        # stale (no file to feed, no login). Only public records come in; guarded so it can't crash
+        # the run. Supported counties only; otherwise verify_locations gives its usual clear error.
+        try:
+            ds = cfg.get("data_sources") or {}
+            pkl = next(iter((ds.get("parcel_layers") or {}).values()), "extracted/parcels.pkl")
+            pkl_abs = pkl if os.path.isabs(pkl) else os.path.join(account_dir, pkl)
+            ent0 = cfg.get("entities") or {}
+            county = cfg.get("county_label") or next(
+                (str(c) for p2 in (cfg.get("policies") or []) for c in (p2.get("counties") or [])), "")
+            if ds.get("auto_fetch_parcels", True):
+                from core.parcels import fetch as _pf
+                if _pf.supported(county):
+                    names = []
+                    for key in ("insured_aliases", "related", "lessors", "roster"):
+                        names += list(ent0.get(key) or [])
+                    ok, msg = _pf.ensure_parcels(county, names, pkl_abs, progress=progress)
+                    if not ok:
+                        progress(f"(parcel auto-fetch: {msg})")
+        except Exception as e:
+            progress(f"(parcel auto-fetch skipped: {e})")
+
         # Offline reader: if the lease/ownership documents haven't been turned into data yet, read them
         # ON THIS MACHINE now (never clobbers reviewer-prepared files; guarded so it can't break the run).
         try:
