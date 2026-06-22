@@ -39,7 +39,12 @@ def reader_status():
         st["ocr"] = True
     except Exception:
         pass
-    st["local_model"] = bool(os.environ.get("PRF_LOCAL_VLM_URL"))   # configured loopback model, if any
+    try:
+        vs = LE.vlm_status()
+        st["vlm"] = vs
+        st["local_model"] = bool(vs.get("reachable"))   # a handwriting model is actually up
+    except Exception:
+        st["local_model"] = False
     return st
 
 

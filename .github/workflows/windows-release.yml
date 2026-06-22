@@ -1,4 +1,4 @@
-name: Windows release (6 gates)
+name: Desktop release (Windows + macOS)
 
 # The #1 guarantee: a build that doesn't actually launch can NEVER be published.
 # Each gate is a separate step; GitHub Actions stops the job on the first failure, so the installer
@@ -96,3 +96,51 @@ jobs:
             "${{ github.ref_name }}" "${{ github.run_number }}" \
             "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
           curl -sf -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK" || true
+
+  # macOS build — same DOA-never-publishes guarantee. Publishes a Mac download to its own rolling tag.
+  mac:
+    runs-on: macos-latest          # Apple Silicon — matches a Mac Studio (arm64)
+    env:
+      APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('0.0.{0}', github.run_number) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-desktop.txt
+      - name: Stamp build version
+        run: printf '%s' "$APP_VERSION" > version.txt
+
+      - name: "Gate 1 — pytest (logic)"
+        run: python -m pytest tests/test_smoke.py -q
+      - name: "Gate 2 — dependency completeness (clean-env import scan)"
+        run: python -m pytest tests/test_deps_complete.py -q
+
+      - name: "Gate 3 — PyInstaller build (.app)"
+        run: pyinstaller --clean --noconfirm build/PRF_Review_mac.spec
+
+      - name: "Gate 4 — BOOT SELF-TEST (launch the .app, poll /health, fail if DOA)"
+        env:
+          PRF_EXE: dist/PRF Review.app/Contents/MacOS/PRF Review
+        run: python -m pytest -m boot tests/test_boot_exe.py -q -s
+
+      - name: "Gate 5 — package the .app into a downloadable zip"
+        run: |
+          cd dist
+          ditto -c -k --sequesterRsrc --keepParent "PRF Review.app" "PRF-Review-macOS.zip"
+
+      # Permanent Mac link:  https://github.com/<owner>/<repo>/releases/download/mac-build/PRF-Review-macOS.zip
+      - name: "Gate 6 — Publish to permanent rolling release (mac-build)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="Latest verified macOS build (#$GITHUB_RUN_NUMBER) — always the newest build that passed the boot self-test."
+          if gh release view mac-build >/dev/null 2>&1; then
+            gh release edit mac-build --notes "$notes"
+          else
+            gh release create mac-build --title "PRF Review — macOS desktop build" --notes "$notes"
+          fi
+          gh release upload mac-build "dist/PRF-Review-macOS.zip" --clobber

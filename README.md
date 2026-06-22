@@ -63,8 +63,15 @@ Distribution is a GitHub Release on a **single rolling tag, `windows-build`**, w
   self‑test (Gate 4) passes, so a build that didn't launch never reaches the link.
 
 Permanent links (public repo → no login needed):
-- Installer: `https://github.com/lakeosoyoos/prf-review-app/releases/download/windows-build/PRF-Review-Setup.exe`
-- Portable ZIP: `…/releases/download/windows-build/PRF-Review-Windows.zip`
+- Windows installer: `https://github.com/lakeosoyoos/prf-review-app/releases/download/windows-build/PRF-Review-Setup.exe`
+- Windows portable ZIP: `…/releases/download/windows-build/PRF-Review-Windows.zip`
+- **macOS app:** `https://github.com/lakeosoyoos/prf-review-app/releases/download/mac-build/PRF-Review-macOS.zip`
+
+The macOS app is built + boot-tested by a parallel `mac` CI job (Apple Silicon) and published to its
+own rolling tag `mac-build`, with the same "a DOA build never publishes" guarantee. It's unsigned, so
+the first launch needs right-click → Open (or `xattr -dr com.apple.quarantine "PRF Review.app"`) —
+removing that warning needs an Apple Developer ID ($99/yr). For **cloud-level handwriting** on a Mac
+Studio, see **`SETUP-MAC-AI.md`** (run a local vision model; nothing leaves your network).
 
 Updates reach techs by **manual re‑download** from the same link (the installer upgrades in place).
 Each build is stamped with the CI run number and shown in the app header (“Build ####”) so a tech can

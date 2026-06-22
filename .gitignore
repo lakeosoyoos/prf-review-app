@@ -12,3 +12,6 @@ venv/
 # local-only config + account data (never commit account PII / parcel layers)
 settings.json
 accounts/*/
+
+# local build venv
+.buildvenv/

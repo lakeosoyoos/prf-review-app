@@ -30,6 +30,10 @@ requests==2.32.3
 # parcel ownership auto-fetch (public county assessor) — parses the results HTML
 beautifulsoup4==4.12.3
 soupsieve==2.5
+# PDF -> image for the local vision-model (handwriting) path. Imported under try/except in
+# local_extract, so it's an optional accuracy booster, not a hard requirement — but we ship it so the
+# handwriting tier works out of the box (especially in the macOS build aimed at the Mac Studio).
+PyMuPDF==1.24.10
 
 # pywebview is intentionally NOT pinned here: it's an OPTIONAL native-window upgrade, imported
 # under try/except in launcher.py. The frozen app launches via the browser if it's absent, so a

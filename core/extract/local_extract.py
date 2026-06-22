@@ -24,17 +24,31 @@ sys.path.insert(0, os.path.dirname(__file__))
 import form_templates as T
 
 # ----------------------------------------------------------------------------- privacy guard
+def _trusted_hosts():
+    """Optionally allow ONE on-premises model host (e.g. the office Mac Studio down the hall) in
+    addition to loopback. This is a DELIBERATE boundary the operator opts into — the data still never
+    leaves your own network. Set PRF_LOCAL_VLM_TRUSTED_HOST to that machine's LAN IP/hostname."""
+    h = (os.environ.get("PRF_LOCAL_VLM_TRUSTED_HOST") or "").strip().lower()
+    return {h} if h else set()
+
+
 def _assert_loopback(url):
-    """Refuse any model endpoint that is not on this machine. Hard stop — protects confidentiality."""
-    host = urllib.parse.urlparse(url).hostname or ""
-    if host in ("localhost",):
+    """Refuse any model endpoint that is not on this machine (or the one opted-in on-prem host).
+    Hard stop — protects confidentiality. Cloud/remote hosts are always refused."""
+    host = (urllib.parse.urlparse(url).hostname or "").lower()
+    if host in ("localhost",) or host in _trusted_hosts():
         return
     try:
         ip = ipaddress.ip_address(socket.gethostbyname(host))
     except Exception:
         raise RuntimeError(f"REFUSED: model host '{host}' is not loopback. Local-only policy.")
-    if not ip.is_loopback:
-        raise RuntimeError(f"REFUSED: model host '{host}' ({ip}) is not loopback. Data must not leave the machine.")
+    if ip.is_loopback:
+        return
+    # a private-LAN address is allowed ONLY if it's the explicitly trusted on-prem host
+    if (ip.is_private or ip.is_link_local) and host in _trusted_hosts():
+        return
+    raise RuntimeError(f"REFUSED: model host '{host}' ({ip}) is not this machine or the trusted "
+                       f"on-prem host. Data must not leave your network.")
 
 OLLAMA_URL = os.environ.get("PRF_LOCAL_VLM_URL", "http://127.0.0.1:11434/api/generate")
 VLM_MODEL = os.environ.get("PRF_LOCAL_VLM_MODEL", "qwen2.5vl")
@@ -97,6 +111,28 @@ def vlm_extract(png_bytes, schema_hint, url=None, model=None):
         return json.loads(resp.get("response", "{}"))
     except (urllib.error.URLError, ConnectionError, OSError):
         return None  # no local model running — caller falls back to template/human queue
+
+def vlm_status(url=None, timeout=3):
+    """Report the local vision model: configured host/model, whether it's reachable, guard ok.
+    Only a loopback/trusted-host probe — never contacts a remote server."""
+    url = url or OLLAMA_URL
+    host = urllib.parse.urlparse(url).hostname or ""
+    st = {"host": host, "model": VLM_MODEL, "reachable": False, "guard_ok": True, "models": []}
+    try:
+        _assert_loopback(url)
+    except RuntimeError:
+        st["guard_ok"] = False
+        return st
+    try:
+        tags_url = url.replace("/api/generate", "/api/tags")
+        with urllib.request.urlopen(tags_url, timeout=timeout) as r:
+            data = json.loads(r.read().decode())
+        st["reachable"] = True
+        st["models"] = [m.get("name") for m in data.get("models", []) if m.get("name")]
+    except Exception:
+        pass
+    return st
+
 
 # ----------------------------------------------------------------------------- orchestration
 SCHEMA_HINTS = {

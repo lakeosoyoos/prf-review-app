@@ -117,7 +117,12 @@ fetch("/api/version").then(r => r.json()).then(d => {
 fetch("/api/reader-status").then(r => r.json()).then(s => {
   const el = document.getElementById("reader"); if (!el) return;
   const ocr = s.ocr ? "OCR✓" : "OCR off";
-  el.textContent = s.parsers ? `Offline reader · ${ocr}` : "reader n/a";
-  el.title = `All document reading is on this computer (no internet). Standard forms: parsers always; ` +
-             `scans: ${s.ocr ? "OCR installed" : "install OCR pack for scanned docs"}; on-PC model: ${s.local_model ? "configured" : "off"}.`;
+  const vlm = s.vlm || {};
+  const hand = vlm.reachable ? " · Handwriting model ✓" : "";
+  el.textContent = s.parsers ? `Offline reader · ${ocr}${hand}` : "reader n/a";
+  const handTip = vlm.reachable
+    ? `handwriting model ${vlm.model || ""} running on ${vlm.host}`
+    : "handwriting model off (run a local vision model — see SETUP-MAC-AI.md)";
+  el.title = `All document reading stays on this machine / your network (no internet). Standard forms: ` +
+             `parsers always; scans: ${s.ocr ? "OCR installed" : "install OCR pack"}; ${handTip}.`;
 }).catch(() => {});

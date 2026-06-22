@@ -17,6 +17,26 @@ WEB = os.path.join(HERE, "web")
 SETTINGS = os.path.join(APP_DIR, "settings.json")
 
 
+def _bridge_settings_to_env():
+    """Let settings.json configure the local handwriting model without a terminal. Sets the
+    PRF_LOCAL_VLM_* env vars (only if not already set) so the review subprocess inherits them."""
+    if not os.path.exists(SETTINGS):
+        return
+    try:
+        cfg = json.load(open(SETTINGS)) or {}
+    except Exception:
+        return
+    for key, env in (("vlm_model", "PRF_LOCAL_VLM_MODEL"),
+                     ("vlm_url", "PRF_LOCAL_VLM_URL"),
+                     ("vlm_trusted_host", "PRF_LOCAL_VLM_TRUSTED_HOST")):
+        val = cfg.get(key)
+        if val and not os.environ.get(env):
+            os.environ[env] = str(val)
+
+
+_bridge_settings_to_env()
+
+
 def accounts_roots():
     if os.path.exists(SETTINGS):
         try:
@@ -65,6 +85,16 @@ def api_reader_status():
         return jsonify(ingest.reader_status())
     except Exception as e:
         return jsonify({"parsers": False, "error": str(e)})
+
+
+@app.route("/api/vlm-test")
+def api_vlm_test():
+    # probe the local handwriting model (loopback / trusted on-prem host only)
+    try:
+        from core.extract import local_extract
+        return jsonify(local_extract.vlm_status())
+    except Exception as e:
+        return jsonify({"reachable": False, "error": str(e)})
 
 
 @app.route("/")

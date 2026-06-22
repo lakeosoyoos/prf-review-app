@@ -25,7 +25,9 @@ STDLIB = set(getattr(sys, "stdlib_module_names", set())) | {"__future__"}
 def _source_files():
     out = []
     for base, dirs, files in os.walk(ROOT):
-        dirs[:] = [d for d in dirs if d not in ("tests", "build", "dist", ".git", "__pycache__", ".github")]
+        dirs[:] = [d for d in dirs if d not in (
+            "tests", "build", "dist", ".git", "__pycache__", ".github",
+            ".buildvenv", "venv", ".venv", "env", "site-packages")]
         for f in files:
             if f.endswith(".py"):
                 out.append(os.path.join(base, f))
