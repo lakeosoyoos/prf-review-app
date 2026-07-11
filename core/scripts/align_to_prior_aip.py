@@ -44,9 +44,13 @@ def main(path, ev_path, do_blm=True, do_state=True, do_cert=True, do_tribal=True
         is_tribal = ("tribal" in kinds) or ("COLVILLE" in rectxt)
         is_lessor = bool(kinds & {"lessor", "fee_related", "private_tag", "fee_insured"}) or bool(certs)
         is_fed = bool(labels & FEDERAL_LABELS) or any(x in (b + " " + instr.lower()) for x in ("federal", "blm", "usfs", "forest"))
+        # never fold to an allotment when the tenure check found taxed private/state parcels here —
+        # that ground is not federal, whatever the CLU-operator label said. Same for unresolvable
+        # legals: county records can't verify them, so they stay exceptions for a human.
+        tenure_private = ("taxed county parcels" in b) or ("unresolvable legal" in b)
 
         # (1) federal ground (EXCEPTION or LIKELY) -> allotment-level MATCHED per the AIP standard
-        if do_blm and is_fed and v["status"] in ("EXCEPTION", "LIKELY"):
+        if do_blm and is_fed and not tenure_private and v["status"] in ("EXCEPTION", "LIKELY"):
             changed[f"{v['status']}->MATCHED (allotment)"] += 1
             v.update(status="MATCHED", precision="allotment",
                      instrument=blm_cite.get(k, BLM_GENERIC),

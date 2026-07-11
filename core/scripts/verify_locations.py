@@ -50,10 +50,11 @@ def main(config_path):
     meta = pickle.load(open(pkl_path, "rb"))
 
     # PIN -> section, and section -> controlled parcels (parcel-precise control side)
-    pin2k, sec_ctl = {}, collections.defaultdict(list)
+    pin2k, sec_ctl, sec_has_parcels = {}, collections.defaultdict(list), set()
     for a in meta["attrs"]:
         k = trs_match.parse_map(a.get("map")); pin = str(a.get("PIN", ""))
         if k:
+            sec_has_parcels.add(k)     # any TAXED county parcel here => NOT unpatented federal land
             pin2k[pin] = k
             kind, label = oc.classify(a.get("owner") or "")
             if kind != "none":
@@ -157,7 +158,26 @@ def main(config_path):
             else:
                 status, basis = "LIKELY", "tribal/reservation parcels in section; recorded lease not section-confirmed"
         elif fed or "FEDERAL" in les.upper() or any(x["label"] in FEDERAL for x in ctrl):
-            status, basis = "EXCEPTION", "federal (BLM/USFS) — allotment GIS boundary confirmation required (not on file)"
+            # TENURE CHECK: a "BLM/USFS" label (often from FSA-CLU operatorship) only holds on genuine
+            # federal/public land. If the county layer shows TAXED parcels in this section, the ground
+            # is private or state — not federal — so don't fold it to an allotment. Flag for the
+            # correct instrument instead. (Guards the mislabel that put private ground on the permit.)
+            if k and k in sec_has_parcels and not any(x["label"] in FEDERAL for x in ctrl):
+                status = "EXCEPTION"
+                basis = ("labeled a BLM/USFS permit by FSA-CLU operatorship, but this section has taxed "
+                         "county parcels (private or state ownership) — obtain the controlling lease/deed "
+                         "for the actual owner")
+            elif k is None or (isinstance(k, tuple) and k[2] is None):
+                # UNRESOLVABLE LEGAL: the county record can't see this field at all (e.g. 'IA21'),
+                # so the federal label is unverifiable in both directions. Never fold it to an
+                # allotment — a reviewer must place it on the ground. (This is exactly how the
+                # Schluneger field slipped through: null section looked 'public-land consistent'.)
+                status = "EXCEPTION"
+                basis = ("unresolvable legal — the location's legal description does not parse to a "
+                         "section, so county ownership records cannot verify the federal label; "
+                         "confirm the field's actual location and owner (FSA CLU map / on the ground)")
+            else:
+                status, basis = "EXCEPTION", "federal (BLM/USFS) — allotment GIS boundary confirmation required (not on file)"
         elif gov_state:
             status, basis = "LIKELY", "state-lease parcels in section per layer; recorded lease not section-confirmed"
         elif "CLU operator" in ctl or "operatorship" in ctl.lower():
