@@ -47,7 +47,8 @@ def main(path, ev_path, do_blm=True, do_state=True, do_cert=True, do_tribal=True
         # never fold to an allotment when the tenure check found taxed private/state parcels here —
         # that ground is not federal, whatever the CLU-operator label said. Same for unresolvable
         # legals: county records can't verify them, so they stay exceptions for a human.
-        tenure_private = ("taxed county parcels" in b) or ("unresolvable legal" in b)
+        tenure_private = ("taxed county parcels" in b) or ("unresolvable legal" in b) \
+            or ("allotment legal cross-referenced" in b)
 
         # (1) federal ground (EXCEPTION or LIKELY) -> allotment-level MATCHED per the AIP standard
         if do_blm and is_fed and not tenure_private and v["status"] in ("EXCEPTION", "LIKELY"):

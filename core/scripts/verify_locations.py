@@ -40,6 +40,20 @@ def loc_section(legal):
     return None
 
 
+def loc_allot(legal):
+    """Parse an Indian-Allotment legal like '029N-023E-IA21' -> (T, R, allotment#). These are Moses/
+    Columbia allotment survey tracts — the allotment number is the land unit (unrelated to any
+    section number). Returns None for ordinary section legals."""
+    s = str(legal or "")
+    m = re.search(r"\bIA[- ]?(\d{1,3})\b", s)
+    if not m:
+        return None
+    mT, mR = re.search(r"(\d+)\s*N", s), re.search(r"(\d+)\s*E", s)
+    if mT and mR:
+        return (int(mT[1]), int(mR[1]), int(m.group(1)))
+    return None
+
+
 def main(config_path):
     cfg = yaml.safe_load(open(config_path)); D = cfg["deliverable"]
     county = cfg.get("county_label") or "the in-scope county"
@@ -51,8 +65,15 @@ def main(config_path):
 
     # PIN -> section, and section -> controlled parcels (parcel-precise control side)
     pin2k, sec_ctl, sec_has_parcels = {}, collections.defaultdict(list), set()
+    # Indian/Moses-Allotment index: the county's own legal text names the allotment ("ALLOT MA-26"),
+    # which is the land unit FSA cites in 'IA##' legals. (T, R, allot#) -> owning parcels.
+    allot_idx = collections.defaultdict(list)
     for a in meta["attrs"]:
         k = trs_match.parse_map(a.get("map")); pin = str(a.get("PIN", ""))
+        am = re.search(r"ALLOT\w*\.?\s*(?:MA|IA)?\s*[-#]?\s*(\d{1,3})\b", str(a.get("legal") or ""), re.I)
+        if am and k:
+            allot_idx[(k[0], k[1], int(am.group(1)))].append(
+                {"pin": pin, "owner": a.get("owner"), "legal": a.get("legal")})
         if k:
             sec_has_parcels.add(k)     # any TAXED county parcel here => NOT unpatented federal land
             pin2k[pin] = k
@@ -157,6 +178,23 @@ def main(config_path):
                 status, basis, instr = "MATCHED", "recorded tribal lease covers section", [os.path.basename(pub_trs[k]["file"])]
             else:
                 status, basis = "LIKELY", "tribal/reservation parcels in section; recorded lease not section-confirmed"
+        elif (ia := loc_allot(r[c_leg])) and allot_idx.get(ia):
+            # 'IA##' legal = a Moses/Columbia allotment survey tract. The county's own legal text names
+            # the allotment on its parcel records, so cross-reference resolves the field to a specific
+            # owned parcel — no section needed.
+            aps = allot_idx[ia]
+            owners = sorted({str(p["owner"]) for p in aps})
+            files = sorted({f for o in owners for f in di.lookup(o)})
+            pins = sorted({p["pin"] for p in aps})
+            cite = f"Moses Allotment {ia[2]} (T{ia[0]}N R{ia[1]}E) = county parcel(s) {', '.join(pins[:4])} owned by {'; '.join(owners[:3])}"
+            if files:
+                status, basis = "MATCHED", f"allotment legal cross-referenced to county records: {cite}; owner's lease on file"
+                instr = files; precise = "parcel"
+            else:
+                status = "EXCEPTION"
+                basis = (f"allotment legal cross-referenced to county records: {cite} — obtain/confirm that "
+                         "owner's lease (no matching document on file)")
+                instr = [cite]
         elif fed or "FEDERAL" in les.upper() or any(x["label"] in FEDERAL for x in ctrl):
             # TENURE CHECK: a "BLM/USFS" label (often from FSA-CLU operatorship) only holds on genuine
             # federal/public land. If the county layer shows TAXED parcels in this section, the ground
