@@ -9,8 +9,8 @@ Parses the four formats seen in the field into (township, range, section) int tu
                                                         # tribal: "Section 35, Township 31 North, Range 25 East"
 
     idx = InstrumentIndex()
-    idx.add_instrument(legal_text, label="WA DNR lease C1200B71 -> Example Cattle Ltd")
-    idx.lookup((31, 25, 31))  -> ["WA DNR lease C1200B71 -> Example Cattle Ltd"]
+    idx.add_instrument(legal_text, label="WA DNR lease C1200B71 -> Gebbers Cattle Ltd")
+    idx.lookup((31, 25, 31))  -> ["WA DNR lease C1200B71 -> Gebbers Cattle Ltd"]
 """
 import re
 
@@ -38,14 +38,23 @@ def parse_prose(text):
     for m in re.finditer(r'Section\s+(\d+)[^.;]*?Township\s+(\d+)\s*North[^.;]*?Range\s+(\d+)\s*East',
                          t, re.I | re.S):
         out.append((int(m.group(2)), int(m.group(3)), int(m.group(1))))
-    # block: "<sections...> T31N R25E" — sections listed before the township-range
-    for m in re.finditer(r'((?:Sec(?:tion)?s?\.?\s*\d+[^T]*?)+)T\s*(\d+)\s*N\b[, ]*R\s*(\d+)\s*E',
-                         t, re.I):
-        T, R = int(m.group(2)), int(m.group(3))
-        for sm in re.finditer(r'Sec(?:tion)?s?\.?\s*(\d+)', m.group(1), re.I):
-            tup = (T, R, int(sm.group(1)))
-            if tup not in out:
-                out.append(tup)
+    # block: "<sections...> T31N R25E" — sections listed before the township-range.
+    # Anchor-segmentation (NOT a [^T] scan: with re.I that rejects ordinary words like
+    # 'the'/"Gov't" between the section list and the anchor, silently dropping sections).
+    anchors = list(re.finditer(r'T\.?\s*(\d{1,3})\s*N\.?\b[,;\s]*R\.?\s*(\d{1,3})\s*E\b', t, re.I))
+    prev_end = 0
+    for a in anchors:
+        T, R = int(a.group(1)), int(a.group(2))
+        segment = t[prev_end:a.start()]
+        for sm in re.finditer(r'Sec(?:tion)?s?\.?\s*((?:\d{1,2}\s*(?:,|and|&|\s)\s*)*\d{1,2})',
+                              segment, re.I):
+            for num in re.findall(r'\d{1,2}', sm.group(1)):
+                s = int(num)
+                if 1 <= s <= 36:
+                    tup = (T, R, s)
+                    if tup not in out:
+                        out.append(tup)
+        prev_end = a.end()
     return out
 
 

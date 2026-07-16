@@ -108,6 +108,9 @@ def main(config_path, flat=False, out_override=None):
     AGENCY_KW = [("WDFW", "WA WDFW (state lease)"), ("FISH", "WA WDFW (state lease)"),
                  ("FOREST", "US Forest Service (permit)"), ("USFS", "US Forest Service (permit)"),
                  ("BLM", "US BLM (federal permit)"), ("INTERIOR", "US BLM (federal permit)"),
+                 ("COLVILLE", "Colville Tribal (lease)"), ("TRIBE", "Colville Tribal (lease)"),
+                 ("TRIBAL", "Colville Tribal (lease)"), ("CTL", "Colville Tribal (lease)"),
+                 ("PUD", "Public Utility District (permit)"),
                  ("DNR", "WA DNR (state lease)"), ("NATURAL RESOURCES", "WA DNR (state lease)")]
     typed = collections.defaultdict(list)   # agency label -> [recorded filenames]
     for src in (D.get("recorded_sources") or []):
@@ -125,7 +128,13 @@ def main(config_path, flat=False, out_override=None):
             blob = (str(it.get("term", "")) + " " + str(it.get("lessor", ""))).upper()
             lab = next((l for kw, l in AGENCY_KW if kw in blob), "WA DNR (state lease)")
             if f:
-                typed[lab].append(f)
+                # carry a human title for the bundle bookmark: agreement number if the extraction
+                # captured one, else a lessor snippet (reviewer request: leases findable by number)
+                num_m = re.search(r"\b((?:C\d{3,4}[A-Z]\d{4,6})|(?:1[0-2]-[A-Z0-9]{5,7})|(?:OR\d{5})|(?:\d{6}))\b",
+                                  str(it.get("term", "")) + " " + str(it.get("lessor", "")))
+                lessor_snip = re.sub(r"\s+", " ", str(it.get("lessor", "")))[:48]
+                title = (num_m.group(1) + " — " + lessor_snip) if num_m else lessor_snip
+                typed[lab].append((f, title or None))
 
     # ---- find sources + build agency bundles ------------------------------------------
     def find_src(fn):
@@ -141,21 +150,47 @@ def main(config_path, flat=False, out_override=None):
         shutil.rmtree(FOLDER)
     os.makedirs(DOCS)
 
+    def _bundle_title(fn):
+        """Human title for a bundle constituent: lease/permit number if extractable, else the stem."""
+        stem = os.path.splitext(os.path.basename(fn))[0]
+        m = re.search(r"\b((?:C\d{3,4}[A-Z]\d{4,6})|(?:1[0-2]-[A-Z0-9]{5,7})|(?:OR\d{5})|(?:\d{6}))\b", stem)
+        return (f"{m.group(1)} — {stem}" if m else stem)[:90]
+
     def merge_bundle(out, files):
+        """Merge sources into one PDF WITH per-document bookmarks ('tabs') and a manifest, so
+        reviewers can click straight to a constituent document (reviewer request, 7/2026)."""
         w = PdfWriter(); n = 0
-        for fn in files:
+        manifest = []
+        for entry in files:
+            fn, title = (entry if isinstance(entry, tuple) else (entry, None))
             s = find_src(fn)
             if not s:
                 continue
             try:
+                start = len(w.pages)          # live counter — never assume config order held
                 for p in PdfReader(s).pages:
                     w.add_page(p)
+                bt = title or _bundle_title(fn)
+                w.add_outline_item(bt, start)
+                manifest.append({"file": fn, "title": bt,
+                                 "start": start + 1, "end": len(w.pages)})
                 n += 1
             except Exception:
                 pass
         if n:
+            try:
+                w.page_mode = "/UseOutlines"   # open with the bookmarks panel visible
+            except Exception:
+                pass
             with open(os.path.join(DOCS, linkname(out)), "wb") as fh:
                 w.write(fh)
+            try:
+                mpath = os.path.join("extracted", "bundle_manifest.json")
+                all_m = json.load(open(mpath)) if os.path.exists(mpath) else {}
+                all_m[linkname(out)] = manifest
+                json.dump(all_m, open(mpath, "w"), indent=1)
+            except Exception:
+                pass
         return out if n else None
 
     bundle_out = {}            # agency label -> bundle filename (if built)
@@ -179,7 +214,7 @@ def main(config_path, flat=False, out_override=None):
     c_ac = col("Field Reported Acres", "Reported Acres")
     c_leg, c_grid = col("Legal"), col("Assigned To", "Grid")
     c_ctl = col("Control source (section parcels)", "Control source")
-    c_les = col("Lessor (party leasing to Example Cattle LP)", "Lessor")
+    c_les = col("Lessor (party leasing to Gebbers Cattle LP)", "Lessor")
     c_flag = col("Flag")
 
     overrides = D.get("manual_overrides") or []
