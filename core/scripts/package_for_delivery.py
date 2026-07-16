@@ -73,14 +73,29 @@ def main(src, short):
     wbname = short + "_LocationReview.xlsx"
     wb.save(os.path.join(dest, wbname))
 
-    with open(os.path.join(dest, "READ_ME_FIRST.txt"), "w") as f:
-        f.write("PRF High Dollar Review — how to open\n"
-                "====================================\n\n"
-                "1. Download the single .zip file.\n"
-                "2. Right-click it -> Extract All (Windows) / double-click (Mac).\n"
-                f"3. Open {wbname}.\n\n"
-                "Everything is in ONE flat folder with short names, so the clickable links work as\n"
-                "soon as it's extracted. No OneDrive account needed; no folder to re-zip.\n")
+    # README: if the source folder ships a curated READ_ME_FIRST.txt, preserve it verbatim (so
+    # account-specific delivery notes survive re-packaging); else write the field-hardened default.
+    src_readme = os.path.join(src, "READ_ME_FIRST.txt")
+    dest_readme = os.path.join(dest, "READ_ME_FIRST.txt")
+    if os.path.exists(src_readme):
+        shutil.copy2(src_readme, dest_readme)
+    else:
+        with open(dest_readme, "w") as f:
+            f.write("PRF High Dollar Review — how to open\n"
+                    "====================================\n\n"
+                    "1. Download the single .zip file. No OneDrive account needed.\n"
+                    "   No need to rename it - just download it as-is.\n"
+                    "2. Right-click it -> Extract All (Windows) / double-click (Mac).\n"
+                    f"3. Open {wbname}.\n"
+                    "4. If Excel shows a yellow \"PROTECTED VIEW\" bar, click \"Enable Editing\".\n"
+                    "   The clickable links won't work until you do.\n"
+                    "   (Optional: before extracting, right-click the .zip -> Properties ->\n"
+                    "   check \"Unblock\" -> OK, and the yellow bar never appears.)\n\n"
+                    "Everything is in ONE flat folder with short names, so the clickable links work\n"
+                    "as soon as it's extracted. Keep the .xlsx in the same folder as the PDFs. If your\n"
+                    "Downloads folder syncs to OneDrive, you can extract to any local folder instead.\n\n"
+                    "The big agency bundles (DNR / BLM-USFS / WDFW) open with a clickable CONTENTS page\n"
+                    "and bookmarks (\"tabs\") - DNR leases by number, BLM ground by allotment name.\n")
 
     # ONE pre-made zip (short name -> short extract path)
     zpath = os.path.join(parent, short + ".zip")
